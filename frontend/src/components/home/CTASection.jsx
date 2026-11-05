@@ -4,6 +4,7 @@ import {
     FaShieldAlt,
     FaCoins,
     FaCloud,
+    FaRegCalendarCheck,
 } from "react-icons/fa";
 
 import { usePathname } from "next/navigation";
@@ -33,11 +34,10 @@ const defaults = {
     description:
         "Request a free, no-obligation consultation. Tell us what your business needs and we'll follow up with a clear quote tailored to you.",
     backgroundImage: "/images/home/cta-desk.png",
-    formEyebrow: "BOOK YOUR",
-    formTitle: "Free",
-    formTitleHighlight: "Consultation",
-    formDescription:
-        "Leave your details and we'll be in touch within one working day to arrange your call.",
+    // Form card header: "Book Your" + coral "Free Consultation".
+    formHeading: "Book Your",
+    formHeadingHighlight: "Free Consultation",
+    formSubtitle: "Leave your details and we'll be in touch within one working day.",
     benefits: [
         {
             icon: "shield",
@@ -61,6 +61,34 @@ const defaults = {
 const fields = {
     "benefits[].icon": { type: "select", options: Object.keys(ICONS) },
 };
+
+
+// The booking card: compact header (icon, title, one-line subtitle) over the form.
+function FormCard({ E, SubHeading, variant, className = "" }) {
+    const desktop = variant === "desktop";
+    return (
+        <div className={`relative w-full overflow-hidden bg-white shadow-[0_24px_70px_rgba(0,0,0,.32)] ${desktop ? "rounded-[28px] px-8 py-7" : "rounded-[24px] px-5 py-6 sm:rounded-[28px] sm:px-7 sm:py-7"} ${className}`}>
+            <div aria-hidden="true" className="pointer-events-none absolute -right-16 -top-16 h-44 w-44 rounded-full bg-[#0F9E86] opacity-[0.07]" />
+            <div className="relative z-10">
+                <div className="flex items-center gap-3.5">
+                    <span aria-hidden="true" className={`flex shrink-0 items-center justify-center rounded-2xl bg-[#E8F7F4] text-[#0F9E86] ${desktop ? "h-12 w-12 text-[22px]" : "h-11 w-11 text-[20px]"}`}>
+                        <FaRegCalendarCheck />
+                    </span>
+                    <div className="min-w-0">
+                        <SubHeading className={`font-serif font-bold leading-tight text-[#123A5C] ${desktop ? "text-[28px]" : "text-[23px] sm:text-[28px]"}`}>
+                            <E.Text path="formHeading" />{" "}
+                            <span className="text-[#FF6B4A]"><E.Text path="formHeadingHighlight" /></span>
+                        </SubHeading>
+                        <p className="mt-0.5 text-[13px] leading-5 text-[#64748B] sm:text-sm">
+                            <E.Text path="formSubtitle" />
+                        </p>
+                    </div>
+                </div>
+                <QuoteForm variant={variant} />
+            </div>
+        </div>
+    );
+}
 
 
 // The layout renders this on every page. /contact renders it itself as the
@@ -143,9 +171,9 @@ export default function CTASection({ asPage = false }) {
                 grid
                 h-full
                 max-w-[1280px]
-                grid-cols-2
+                grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]
                 items-center
-                gap-8
+                gap-12
                 px-8
                 "
                 >
@@ -321,103 +349,7 @@ export default function CTASection({ asPage = false }) {
 
 
 
-                    {/* FORM */}
-
-
-                    <div
-                        className="
-                    rounded-[36px]
-                    bg-white
-                    px-8
-                    py-5
-                    shadow-[0_30px_90px_rgba(0,0,0,.35)]
-                    overflow-hidden
-                    relative
-                    "
-                    >
-
-
-                        <div
-                            className="
-                        absolute
-                        right-[-70px]
-                        top-[-70px]
-                        h-[200px]
-                        w-[200px]
-                        rounded-full
-                        bg-[#06182F]
-                        opacity-10
-                        "
-                        />
-
-
-
-
-                        <div className="relative z-10">
-
-
-                            <p
-                                className="
-                            text-xs
-                            font-bold
-                            uppercase
-                            tracking-[0.35em]
-                            text-[#0F9E86]
-                            "
-                            >
-                                <E.Text path="formEyebrow" />
-                            </p>
-
-
-
-                            <SubHeading
-                                className="
-                            mt-2
-                            font-serif
-                            text-[32px] leading-tight
-                            font-bold
-                            text-[#123A5C]
-                            "
-                            >
-
-                                <E.Text path="formTitle" />
-
-                                <span
-                                    className="
-                                text-[#FF6B4A]
-                                "
-                                >
-                                    {" "}<E.Text path="formTitleHighlight" />
-                                </span>
-
-                            </SubHeading>
-
-
-
-
-                            <p
-                                className="
-                            mt-2
-                            text-sm
-                            leading-6
-                            text-[#64748B]
-                            "
-                            >
-
-                                <E.Text path="formDescription" />
-
-                            </p>
-
-
-
-
-                            <QuoteForm variant="desktop" />
-
-
-                        </div>
-
-
-                    </div>
+                    <FormCard E={E} SubHeading={SubHeading} variant="desktop" />
 
 
 
@@ -549,112 +481,7 @@ export default function CTASection({ asPage = false }) {
                     </div>
 
 
-                    {/* =========================
-            QUOTE FORM
-        ========================== */}
-
-                    <div
-                        className="
-                relative
-                mt-7
-                w-full
-                overflow-hidden
-                rounded-[28px]
-                bg-white
-                px-5
-                py-6
-                shadow-[0_25px_70px_rgba(0,0,0,.35)]
-
-                sm:mt-9
-                sm:rounded-[32px]
-                sm:px-7
-                sm:py-7
-            "
-                    >
-
-                        {/* Decorative Circle */}
-                        <div
-                            className="
-                    absolute
-                    right-[-65px]
-                    top-[-65px]
-                    h-[170px]
-                    w-[170px]
-                    rounded-full
-                    bg-[#06182F]
-                    opacity-10
-
-                    sm:h-[190px]
-                    sm:w-[190px]
-                "
-                        />
-
-
-                        <div className="relative z-10">
-
-                            {/* Form Heading */}
-
-                            <p
-                                className="
-                        text-[11px]
-                        font-bold
-                        uppercase
-                        tracking-[0.30em]
-                        text-[#0F9E86]
-
-                        sm:text-xs
-                        sm:tracking-[0.35em]
-                    "
-                            >
-                                <E.Text path="formEyebrow" />
-                            </p>
-
-
-                            <SubHeading
-                                className="
-                        mt-2
-                        font-serif
-                        text-[28px]
-                        font-bold
-                        leading-tight
-                        text-[#123A5C]
-
-                        sm:text-[32px]
-                    "
-                            >
-                                <E.Text path="formTitle" />{" "}
-
-                                <span className="text-[#FF6B4A]">
-                                    <E.Text path="formTitleHighlight" />
-                                </span>
-                            </SubHeading>
-
-
-                            <p
-                                className="
-                        mt-2
-                        max-w-[580px]
-                        text-[13px]
-                        leading-5
-                        text-[#64748B]
-
-                        sm:text-sm
-                        sm:leading-6
-                    "
-                            >
-                                <E.Text path="formDescription" />
-                            </p>
-
-
-                            {/* =========================
-                    FORM FIELDS
-                ========================== */}
-
-                            <QuoteForm variant="mobile" />
-
-                        </div>
-
-                    </div>
+                    <FormCard E={E} SubHeading={SubHeading} variant="mobile" className="mt-7 sm:mt-9" />
 
                 </div>
 

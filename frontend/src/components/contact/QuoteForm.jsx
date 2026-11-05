@@ -2,7 +2,10 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { FaArrowRight, FaLock } from "react-icons/fa";
+import {
+    FaArrowRight, FaBriefcase, FaBullseye, FaCalculator, FaCheck, FaFileInvoice, FaLock, FaPen, FaPhoneAlt,
+    FaRegCalendarCheck, FaRegEnvelope, FaRegFileAlt, FaRegUser, FaUserCheck, FaWhatsapp,
+} from "react-icons/fa";
 
 import { useCms } from "@/components/cms/useCms";
 import { saveBookingRef } from "@/components/contact/bookingHandoff";
@@ -34,6 +37,7 @@ const FIELD_HINTS = {
     "fields[].width": { type: "select", options: ["half", "full"] },
     "fields[].name": { label: "Field key (letters, numbers, _)" },
     "fields[].options": { label: "Options (select / radio / checkboxes)" },
+    "fields[].attachTo": { label: "Show beside field (its key, e.g. phone)" },
     honeypotField: { label: "Honeypot field name (spam trap)" },
 };
 
@@ -70,34 +74,49 @@ function clientErrors(definition, values) {
     return errors;
 }
 
+const FOCUS = "outline-none transition placeholder:text-[#94A3B8] hover:border-[#B8C7DA] focus:border-[#0F9E86] focus:ring-2 focus:ring-[#0F9E86]/20";
+
 const STYLES = {
     desktop: {
-        stepFirst: "mt-4",
-        grid: "mt-3 grid grid-cols-2 gap-x-3 gap-y-3",
-        input: "h-10 w-full rounded-xl border border-[#DCE6F2] bg-white px-4 text-sm text-[#123A5C] outline-none transition placeholder:text-[#94A3B8] hover:border-[#B8C7DA] focus:border-[#0F9E86] focus:ring-2 focus:ring-[#0F9E86]/20",
-        textarea: "h-14 w-full resize-none rounded-xl border border-[#DCE6F2] bg-white px-4 py-3 text-sm text-[#123A5C] outline-none transition placeholder:text-[#94A3B8] hover:border-[#B8C7DA] focus:border-[#0F9E86] focus:ring-2 focus:ring-[#0F9E86]/20",
+        first: "mt-5",
+        section: "mt-5 border-t border-[#EEF2F6] pt-4",
+        grid: "grid grid-cols-2 gap-x-4 gap-y-3.5",
+        input: `h-11 w-full rounded-xl border border-[#DCE6F2] bg-white px-3.5 text-sm text-[#123A5C] ${FOCUS}`,
+        textarea: `block min-h-11 w-full resize-none overflow-hidden rounded-xl border border-[#DCE6F2] bg-white px-3.5 py-[11px] text-sm leading-5 text-[#123A5C] ${FOCUS}`,
         textareaWrap: "mt-4",
-        button: "mt-4 flex h-12 w-full items-center justify-center gap-3 rounded-xl bg-[#FF6B4A] text-base font-semibold text-white shadow-[0_10px_24px_rgba(255,107,74,0.28)] transition hover:-translate-y-px hover:opacity-95 active:translate-y-0 disabled:cursor-wait disabled:opacity-60",
+        textareaIcon: "",
+        textareaPad: "[&>textarea]:pl-10",
+        services: "grid grid-cols-2 gap-2.5",
+        button: "mt-5 flex h-12 w-full items-center justify-center gap-3 rounded-xl bg-[#FF6B4A] text-base font-semibold text-white shadow-[0_8px_18px_rgba(255,107,74,0.25)] transition hover:-translate-y-px hover:bg-[#F45E3D] active:translate-y-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6B4A]/40 focus-visible:ring-offset-2 disabled:cursor-wait disabled:opacity-60",
         arrow: "",
         note: "mt-2.5 flex items-center justify-center gap-2 text-xs text-[#64748B]",
         half: "",
         full: "col-span-2",
     },
     mobile: {
-        stepFirst: "mt-4",
-        grid: "mt-3 grid grid-cols-2 gap-x-2.5 gap-y-3",
-        input: "h-11 w-full rounded-xl border border-[#DCE6F2] bg-white px-3 text-base text-[#123A5C] outline-none transition placeholder:text-[#94A3B8] focus:border-[#0F9E86] focus:ring-2 focus:ring-[#0F9E86]/20 sm:text-sm",
-        textarea: "h-16 w-full resize-none rounded-xl border border-[#DCE6F2] bg-white px-4 py-3 text-base text-[#123A5C] outline-none transition placeholder:text-[#94A3B8] focus:border-[#0F9E86] focus:ring-2 focus:ring-[#0F9E86]/20 sm:text-sm",
+        first: "mt-5",
+        section: "mt-5 border-t border-[#EEF2F6] pt-4",
+        grid: "grid grid-cols-1 gap-x-3 gap-y-3 sm:grid-cols-2",
+        input: `h-11 w-full rounded-xl border border-[#DCE6F2] bg-white px-3.5 text-base text-[#123A5C] sm:text-sm ${FOCUS}`,
+        textarea: `block min-h-11 w-full resize-none overflow-hidden rounded-xl border border-[#DCE6F2] bg-white px-3.5 py-[10px] text-base leading-6 text-[#123A5C] placeholder:text-sm sm:py-[11px] sm:text-sm sm:leading-5 ${FOCUS}`,
         textareaWrap: "mt-4",
-        button: "mt-4 flex h-12 w-full items-center justify-center gap-3 rounded-xl bg-[#FF6B4A] text-base font-semibold text-white shadow-[0_10px_24px_rgba(255,107,74,0.28)] transition active:scale-[0.99] disabled:cursor-wait disabled:opacity-60",
+        // On a phone the note box gives its width to the placeholder.
+        textareaIcon: "hidden sm:block",
+        textareaPad: "sm:[&>textarea]:pl-10",
+        // Two columns only once the labels have room; stacked below that.
+        services: "grid grid-cols-1 gap-2 min-[460px]:grid-cols-2 min-[460px]:gap-2.5",
+        button: "mt-5 flex h-12 w-full items-center justify-center gap-3 rounded-xl bg-[#FF6B4A] text-base font-semibold text-white shadow-[0_8px_18px_rgba(255,107,74,0.25)] transition active:scale-[0.99] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6B4A]/40 focus-visible:ring-offset-2 disabled:cursor-wait disabled:opacity-60",
         arrow: "text-base sm:text-lg",
-        note: "mt-3 flex items-center justify-center gap-2 text-center text-[11px] leading-4 text-[#64748B] sm:text-xs",
+        note: "mt-2.5 flex items-center justify-center gap-2 text-center text-[11px] leading-4 text-[#64748B] sm:text-xs",
         half: "",
-        full: "col-span-2",
+        full: "sm:col-span-2",
     },
 };
 
-const LABEL = "mb-1 block text-[13px] font-semibold text-[#123A5C]";
+const LABEL = "block text-[13px] font-semibold text-[#123A5C]";
+// A service card: the whole card is the hit area.
+const SERVICE =
+    "relative flex min-h-12 cursor-pointer select-none items-center gap-2.5 rounded-xl border border-[#DCE6F2] bg-white px-3 py-2 text-left text-[13.5px] font-semibold leading-snug text-[#123A5C] transition hover:border-[#0F9E86] hover:bg-[#F7FCFB] has-[:checked]:border-[#0F9E86] has-[:checked]:bg-[#EEF9F6] has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-[#0F9E86]/40";
 // Options are pill buttons: the whole pill is the hit area, not a 13px box.
 const CHIP =
     "inline-flex min-h-10 cursor-pointer select-none items-center justify-center gap-2 rounded-xl border border-[#DCE6F2] bg-white px-3.5 py-1.5 text-sm font-medium text-[#123A5C] transition hover:border-[#0F9E86] hover:bg-[#F2FBF9] has-[:checked]:border-[#0F9E86] has-[:checked]:bg-[#E8F7F4] has-[:checked]:text-[#0B6B5B] has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-[#0F9E86]/40";
@@ -136,8 +155,36 @@ function hintFor(field) {
     return field.placeholder && clean(field.placeholder) !== clean(field.label) ? field.placeholder : "";
 }
 
-// The form reads as three short steps. A field can name its step with
-// `group`; otherwise its type decides. Headings are definition.groups.*.
+// Small leading icon for typed inputs, picked by field name/type.
+function iconFor(field) {
+    if (field.type === "email") return FaRegEnvelope;
+    if (field.type === "tel") return FaPhoneAlt;
+    if (field.type === "textarea") return FaPen;
+    if (field.type === "select") return FaBriefcase;
+    if (/(^|_)name$/.test(field.name)) return FaRegUser;
+    return null;
+}
+
+// Mint icon on a service card, matched from its text.
+function serviceIcon(text) {
+    if (/vat/i.test(text)) return FaCalculator;
+    if (/payroll/i.test(text)) return FaRegCalendarCheck;
+    if (/account|corporation/i.test(text)) return FaFileInvoice;
+    if (/self/i.test(text)) return FaUserCheck;
+    return FaRegFileAlt;
+}
+
+// A tick-box that belongs beside another field's label (e.g. "WhatsApp"
+// beside "Phone number") names it with `attachTo`; a "whatsapp" field
+// attaches to the phone field by default.
+function attachTarget(field, fields) {
+    if (field.type !== "checkbox") return null;
+    if (field.attachTo) return field.attachTo;
+    return /whatsapp/i.test(field.name) ? fields.find((f) => f.type === "tel")?.name || null : null;
+}
+
+// Fields fall into sections separated by a hairline. A field can name its
+// section with `group`; otherwise its type decides.
 const GROUP_ORDER = ["details", "needs", "time"];
 function groupOf(field) {
     if (GROUP_ORDER.includes(field.group)) return field.group;
@@ -182,7 +229,7 @@ function DateField({ common, field, value, onChange, onBlur, className }) {
     );
 }
 
-function Field({ field, index, E, value, error, onChange, onBlur, styles, idPrefix, span }) {
+function Field({ field, index, E, value, error, onChange, onBlur, styles, idPrefix, span, addon }) {
     const id = `${idPrefix}-${field.name}`;
     const errorId = error ? `${id}-error` : undefined;
     const invalid = error ? "border-[#E5484D] focus:border-[#E5484D] focus:ring-[#E5484D]/20" : "";
@@ -202,33 +249,80 @@ function Field({ field, index, E, value, error, onChange, onBlur, styles, idPref
         <>
             <E.Text path={`${base}.label`} />
             {field.required ? <span className="text-[#FF6B4A]">{" *"}</span> : null}
+            {!field.required && !["checkbox", "consent_marketing"].includes(field.type) ? (
+                <span className="ml-1 font-normal text-[#94A3B8]"><E.Text path="optionalText" /></span>
+            ) : null}
         </>
     );
-    const chips = (type, isChecked, toggle) => (
-        <fieldset aria-describedby={errorId} aria-invalid={error ? true : undefined}>
-            <legend className={LABEL}>{label}</legend>
-            {/* Tick-boxes sit in two even columns, so a long list stays short. */}
-            <div className={type === "checkbox" ? "grid grid-cols-2 gap-2" : "flex flex-wrap gap-2"}>
-                {options.map((o, i) => (
-                    <label key={i} className={`${CHIP} ${type === "checkbox" ? "justify-start px-3 text-left text-[13px] leading-snug sm:text-sm" : ""} ${error ? "border-[#F4B4B4]" : ""}`}>
-                        <input type={type} name={field.name} value={o.value} checked={isChecked(o.value)} onChange={() => toggle(o.value)} onBlur={onBlur} className="sr-only" />
-                        {type === "checkbox" ? (
-                            <span aria-hidden="true" className="flex h-4 w-4 shrink-0 items-center justify-center rounded border border-current text-[10px] leading-none">
-                                {isChecked(o.value) ? "✓" : ""}
-                            </span>
-                        ) : null}
-                        <E.Text path={optionPath(i)} />
-                    </label>
-                ))}
-            </div>
-        </fieldset>
-    );
+    const chips = (type, isChecked, toggle) =>
+        type === "checkbox" ? (
+            // A tick-box list reads as its own small section: title, hint, 2×2 cards.
+            <fieldset aria-describedby={errorId} aria-invalid={error ? true : undefined}>
+                <legend className="flex items-center gap-2 text-[15px] font-bold text-[#123A5C]">
+                    <FaBullseye aria-hidden="true" className="shrink-0 text-[14px] text-[#0F9E86]" />
+                    <span>{label}</span>
+                </legend>
+                {field.help ? <p className="mt-0.5 text-[12px] text-[#64748B]"><E.Text path={`${base}.help`} /></p> : null}
+                <div className={`mt-2.5 ${styles.services}`}>
+                    {options.map((o, i) => {
+                        const Icon = serviceIcon(o.label);
+                        const checked = isChecked(o.value);
+                        return (
+                            <label key={i} className={`${SERVICE} ${error ? "border-[#F4B4B4]" : ""}`}>
+                                <input type="checkbox" name={field.name} value={o.value} checked={checked} onChange={() => toggle(o.value)} onBlur={onBlur} className="sr-only" />
+                                <span aria-hidden="true" className={`flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-[5px] border-[1.5px] text-[10px] text-white transition ${checked ? "border-[#0F9E86] bg-[#0F9E86]" : "border-[#B8C7DA] bg-white"}`}>
+                                    {checked ? <FaCheck /> : null}
+                                </span>
+                                <span aria-hidden="true" className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#E8F7F4] text-[14px] text-[#0F9E86]">
+                                    <Icon />
+                                </span>
+                                <span className="min-w-0"><E.Text path={optionPath(i)} /></span>
+                            </label>
+                        );
+                    })}
+                </div>
+            </fieldset>
+        ) : (
+            <fieldset aria-describedby={errorId} aria-invalid={error ? true : undefined}>
+                <legend className={`${LABEL} mb-1.5`}>{label}</legend>
+                <div className="flex flex-wrap gap-2">
+                    {options.map((o, i) => (
+                        <label key={i} className={`${CHIP} ${error ? "border-[#F4B4B4]" : ""}`}>
+                            <input type={type} name={field.name} value={o.value} checked={isChecked(o.value)} onChange={() => toggle(o.value)} onBlur={onBlur} className="sr-only" />
+                            <E.Text path={optionPath(i)} />
+                        </label>
+                    ))}
+                </div>
+            </fieldset>
+        );
 
     let control;
     let labelled = true;
     switch (field.type) {
         case "textarea":
-            control = <textarea {...common} placeholder={placeholder} value={value} onChange={(e) => onChange(e.target.value)} onBlur={onBlur} className={`${styles.textarea} ${invalid}`} />;
+            // Starts one line tall and grows with what's typed.
+            control = (
+                <textarea
+                    {...common}
+                    rows={1}
+                    // Empty, it is as tall as its placeholder needs (one line on most screens).
+                    ref={(el) => {
+                        if (el && !el.value) {
+                            el.style.height = "auto";
+                            el.style.height = `${el.scrollHeight + 2}px`;
+                        }
+                    }}
+                    placeholder={placeholder}
+                    value={value}
+                    onChange={(e) => {
+                        e.target.style.height = "auto";
+                        e.target.style.height = `${e.target.scrollHeight + 2}px`;
+                        onChange(e.target.value);
+                    }}
+                    onBlur={onBlur}
+                    className={`${styles.textarea} ${invalid}`}
+                />
+            );
             break;
         case "select":
             if (options.length && options.length <= MAX_CHIPS) {
@@ -237,7 +331,7 @@ function Field({ field, index, E, value, error, onChange, onBlur, styles, idPref
                 break;
             }
             control = (
-                <select {...common} value={value} onChange={(e) => onChange(e.target.value)} onBlur={onBlur} className={`${styles.input} cursor-pointer ${invalid} ${value ? "" : "text-[#94A3B8]"}`}>
+                <select {...common} value={value} onChange={(e) => onChange(e.target.value)} onBlur={onBlur} className={`${styles.input.replace("text-[#123A5C]", value ? "text-[#123A5C]" : "text-[#94A3B8]")} cursor-pointer ${invalid}`}>
                     <option value="">{placeholder || field.label}</option>
                     {options.map((o, i) => <option key={i} value={o.value}>{o.label}</option>)}
                 </select>
@@ -332,12 +426,28 @@ function Field({ field, index, E, value, error, onChange, onBlur, styles, idPref
         }
     }
 
+    const Icon = labelled ? iconFor(field) : null;
+    if (Icon) {
+        control = (
+            <div className="relative">
+                <Icon aria-hidden="true" className={`pointer-events-none absolute left-3.5 text-[14px] text-[#94A3B8] ${field.type === "textarea" ? `top-[15px] ${styles.textareaIcon}` : "top-1/2 -translate-y-1/2"}`} />
+                <div className={`[&>input]:pl-10 [&>select]:pl-10 ${styles.textareaPad}`}>{control}</div>
+            </div>
+        );
+    }
     const wide = span || isWide(field) || !labelled;
+    const tickList = field.type === "checkboxes" || field.type === "multiselect";
     return (
         <div className={wide ? styles.full : styles.half} data-field={field.name}>
-            {labelled ? <label id={`${id}-label`} htmlFor={id} className={LABEL}>{label}</label> : null}
+            {labelled ? (
+                // Label row; `addon` (e.g. the WhatsApp tick) sits at its right.
+                <div className="mb-1.5 flex h-6 items-center justify-between gap-2">
+                    <label id={`${id}-label`} htmlFor={id} className={LABEL}>{label}</label>
+                    {addon}
+                </div>
+            ) : null}
             {control}
-            {field.help ? <p className="mt-1 text-[11px] text-[#64748B]"><E.Text path={`${base}.help`} /></p> : null}
+            {field.help && !tickList ? <p className="mt-1 text-[11px] text-[#64748B]"><E.Text path={`${base}.help`} /></p> : null}
             {error ? <p id={errorId} role="alert" className="mt-1.5 text-[12px] font-medium text-[#D92D20]">{error}</p> : null}
         </div>
     );
@@ -440,8 +550,11 @@ export default function QuoteForm({ variant = "desktop" }) {
     const hiddenFields = indexed.filter(({ field }) => field.type === "hidden");
     // The marketing opt-in is not a step: it sits just above the button.
     const optIns = indexed.filter(({ field }) => field.type === "consent_marketing");
+    // Tick-boxes shown inside another field's label row (e.g. WhatsApp).
+    const attached = indexed.filter(({ field }) => attachTarget(field, fields));
+    const attachedTo = (name) => attached.filter(({ field }) => attachTarget(field, fields) === name);
     const groups = GROUP_ORDER.map((key) => {
-        const all = indexed.filter(({ field }) => !["textarea", "hidden", "consent_marketing"].includes(field.type) && groupOf(field) === key);
+        const all = indexed.filter(({ field }) => !["textarea", "hidden", "consent_marketing"].includes(field.type) && !attachTarget(field, fields) && groupOf(field) === key);
         // Inputs that sit two to a row (not pills, not full-width controls)
         // come first, so a row of pills never splits a pair.
         const pairs = ({ field }) => {
@@ -476,19 +589,36 @@ export default function QuoteForm({ variant = "desktop" }) {
             {editButton}
 
             {groups.map((group, step) => (
-                <section key={step} aria-labelledby={`${idPrefix}-step-${group.key}`} className={step ? "mt-4 border-t border-[#E8EEF5] pt-4" : styles.stepFirst}>
-                    <p id={`${idPrefix}-step-${group.key}`} className="flex items-center gap-2.5 text-[12px] font-bold uppercase tracking-[0.14em] text-[#0F9E86]">
-                        <span aria-hidden="true" className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[#E8F7F4] text-[12px] tracking-normal text-[#0B6B5B]">
-                            {step + 1}
-                        </span>
-                        <E.Text path={`groups.${group.key}`} />
-                    </p>
+                <div key={step} className={step ? styles.section : styles.first}>
                     <div className={styles.grid}>
                         {group.items.map((item, index) => (
-                            <Field key={index} {...fieldProps(item)} styles={styles} span={item.index === group.spanLast} />
+                            <Field
+                                key={index}
+                                {...fieldProps(item)}
+                                styles={styles}
+                                span={item.index === group.spanLast}
+                                addon={attachedTo(item.field.name).map((extra, i) => (
+                                    <label
+                                        key={i}
+                                        // The pill is small; its hit area reaches 44px tall.
+                                        className="relative inline-flex h-6 shrink-0 cursor-pointer select-none items-center gap-1.5 rounded-full border border-[#DCE6F2] bg-white px-2.5 text-[12px] font-semibold leading-none text-[#123A5C] transition before:absolute before:-inset-x-1 before:-inset-y-3 hover:border-[#25D366] has-[:checked]:border-[#25D366] has-[:checked]:bg-[#EAFBF1] has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-[#25D366]/40"
+                                    >
+                                        <input
+                                            type="checkbox"
+                                            id={`${idPrefix}-${extra.field.name}`}
+                                            name={extra.field.name}
+                                            checked={!!valueOf(extra.field)}
+                                            onChange={(e) => setValue(extra.field.name, e.target.checked)}
+                                            className="relative z-10 h-3.5 w-3.5 cursor-pointer accent-[#25D366]"
+                                        />
+                                        <FaWhatsapp aria-hidden="true" className="text-[14px] text-[#25D366]" />
+                                        <E.Text path={`fields.${extra.index}.label`} />
+                                    </label>
+                                ))}
+                            />
                         ))}
                     </div>
-                </section>
+                </div>
             ))}
 
             {longFields.map((item, index) => (
@@ -498,7 +628,7 @@ export default function QuoteForm({ variant = "desktop" }) {
             ))}
 
             {optIns.map((item, index) => (
-                <div key={index} className="mt-3">
+                <div key={index} className="mt-3.5">
                     <Field {...fieldProps(item)} styles={{ ...styles, full: "" }} />
                 </div>
             ))}
