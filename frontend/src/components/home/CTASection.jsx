@@ -8,7 +8,7 @@ import {
 
 import { usePathname } from "next/navigation";
 
-import QuoteForm from "@/components/contact/QuoteForm";
+import QuoteForm, { THANK_YOU_PATH } from "@/components/contact/QuoteForm";
 import { useCms } from "@/components/cms/useCms";
 import { bgImage } from "@/lib/bgImage";
 
@@ -31,13 +31,13 @@ const defaults = {
     pageTitleLine2: "accountant",
     pageTitleHighlight: "consultation.",
     description:
-        "Pick a time for a free, no-obligation video call. Tell us what your business needs and we'll follow up with a clear quote tailored to you.",
+        "Request a free, no-obligation consultation. Tell us what your business needs and we'll follow up with a clear quote tailored to you.",
     backgroundImage: "/images/home/cta-desk.png",
     formEyebrow: "BOOK YOUR",
     formTitle: "Free",
     formTitleHighlight: "Consultation",
     formDescription:
-        "Choose a date and time that suits you. We'll confirm by email with your call details.",
+        "Leave your details and we'll be in touch within one working day to arrange your call.",
     benefits: [
         {
             icon: "shield",
@@ -86,7 +86,8 @@ export default function CTASection({ asPage = false }) {
 
     // Hidden by an admin: nothing is rendered for visitors.
     if (hidden) return null;
-    if (!asPage && pathname === "/contact") return null;
+    // ...and right after booking, /thank-you shouldn't offer the form again.
+    if (!asPage && (pathname === "/contact" || pathname === THANK_YOU_PATH)) return null;
 
     return (
         <>
@@ -94,7 +95,7 @@ export default function CTASection({ asPage = false }) {
                 className="
         hidden
         lg:block
-        py-[149px]
+        py-[96px]
         relative
         overflow-hidden
     "
@@ -328,7 +329,7 @@ export default function CTASection({ asPage = false }) {
                     rounded-[36px]
                     bg-white
                     px-8
-                    py-7
+                    py-5
                     shadow-[0_30px_90px_rgba(0,0,0,.35)]
                     overflow-hidden
                     relative
@@ -371,9 +372,9 @@ export default function CTASection({ asPage = false }) {
 
                             <SubHeading
                                 className="
-                            mt-3
+                            mt-2
                             font-serif
-                            text-[40px]
+                            text-[32px] leading-tight
                             font-bold
                             text-[#123A5C]
                             "
@@ -396,7 +397,7 @@ export default function CTASection({ asPage = false }) {
 
                             <p
                                 className="
-                            mt-3
+                            mt-2
                             text-sm
                             leading-6
                             text-[#64748B]
@@ -613,12 +614,12 @@ export default function CTASection({ asPage = false }) {
                                 className="
                         mt-2
                         font-serif
-                        text-[34px]
+                        text-[28px]
                         font-bold
                         leading-tight
                         text-[#123A5C]
 
-                        sm:text-[40px]
+                        sm:text-[32px]
                     "
                             >
                                 <E.Text path="formTitle" />{" "}

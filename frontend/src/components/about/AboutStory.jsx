@@ -207,8 +207,9 @@ export default function AboutStory() {
                 className="
                     relative
                     hidden
-                    h-[700px]
+                    min-h-[700px]
                     items-center
+                    py-20
                     overflow-hidden
                     bg-white
                     lg:flex

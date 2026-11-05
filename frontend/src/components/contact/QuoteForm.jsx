@@ -1,9 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { FaArrowRight, FaLock } from "react-icons/fa";
 
 import { useCms } from "@/components/cms/useCms";
+import { saveBookingRef } from "@/components/contact/bookingHandoff";
 import { submitForm } from "@/lib/forms";
 import quoteFormDefinition from "@/data/quote-form.json";
 
@@ -14,7 +16,10 @@ import quoteFormDefinition from "@/data/quote-form.json";
    Submit:     POST forms/quote/submit/
    The server validates against the same
    definition; its {errors} are authoritative.
+   Success:    the visitor goes to /thank-you.
 ========================================= */
+
+export const THANK_YOU_PATH = "/thank-you";
 
 export const FORM_NAME = "quote";
 
@@ -67,133 +72,208 @@ function clientErrors(definition, values) {
 
 const STYLES = {
     desktop: {
-        grid: "mt-5 grid grid-cols-2 gap-3",
-        input: "h-11 w-full rounded-xl border border-[#DCE6F2] px-4 text-sm text-[#123A5C] outline-none placeholder:text-[#94A3B8] focus:border-[#0F9E86]",
-        textarea: "h-16 w-full resize-none rounded-xl border border-[#DCE6F2] px-4 py-3 text-sm text-[#123A5C] outline-none placeholder:text-[#94A3B8] focus:border-[#0F9E86]",
-        textareaWrap: "mt-3",
-        button: "mt-4 flex h-12 w-full items-center justify-center gap-3 rounded-xl bg-[#FF6B4A] font-semibold text-white transition hover:opacity-90 disabled:opacity-60",
+        stepFirst: "mt-4",
+        grid: "mt-3 grid grid-cols-2 gap-x-3 gap-y-3",
+        input: "h-10 w-full rounded-xl border border-[#DCE6F2] bg-white px-4 text-sm text-[#123A5C] outline-none transition placeholder:text-[#94A3B8] hover:border-[#B8C7DA] focus:border-[#0F9E86] focus:ring-2 focus:ring-[#0F9E86]/20",
+        textarea: "h-14 w-full resize-none rounded-xl border border-[#DCE6F2] bg-white px-4 py-3 text-sm text-[#123A5C] outline-none transition placeholder:text-[#94A3B8] hover:border-[#B8C7DA] focus:border-[#0F9E86] focus:ring-2 focus:ring-[#0F9E86]/20",
+        textareaWrap: "mt-4",
+        button: "mt-4 flex h-12 w-full items-center justify-center gap-3 rounded-xl bg-[#FF6B4A] text-base font-semibold text-white shadow-[0_10px_24px_rgba(255,107,74,0.28)] transition hover:-translate-y-px hover:opacity-95 active:translate-y-0 disabled:cursor-wait disabled:opacity-60",
         arrow: "",
-        note: "mt-3 flex items-center justify-center gap-2 text-xs text-[#64748B]",
+        note: "mt-2.5 flex items-center justify-center gap-2 text-xs text-[#64748B]",
         half: "",
         full: "col-span-2",
     },
     mobile: {
-        grid: "mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2",
-        input: "h-11 w-full rounded-xl border border-[#DCE6F2] bg-white px-4 text-sm text-[#123A5C] outline-none placeholder:text-[#94A3B8] focus:border-[#0F9E86]",
-        textarea: "h-[76px] w-full resize-none rounded-xl border border-[#DCE6F2] bg-white px-4 py-3 text-sm text-[#123A5C] outline-none placeholder:text-[#94A3B8] focus:border-[#0F9E86] sm:h-[82px]",
-        textareaWrap: "mt-3",
-        button: "mt-3 flex h-12 w-full items-center justify-center gap-3 rounded-xl bg-[#FF6B4A] text-sm font-semibold text-white transition hover:opacity-90 disabled:opacity-60 sm:h-[50px] sm:text-base",
+        stepFirst: "mt-4",
+        grid: "mt-3 grid grid-cols-2 gap-x-2.5 gap-y-3",
+        input: "h-11 w-full rounded-xl border border-[#DCE6F2] bg-white px-3 text-base text-[#123A5C] outline-none transition placeholder:text-[#94A3B8] focus:border-[#0F9E86] focus:ring-2 focus:ring-[#0F9E86]/20 sm:text-sm",
+        textarea: "h-16 w-full resize-none rounded-xl border border-[#DCE6F2] bg-white px-4 py-3 text-base text-[#123A5C] outline-none transition placeholder:text-[#94A3B8] focus:border-[#0F9E86] focus:ring-2 focus:ring-[#0F9E86]/20 sm:text-sm",
+        textareaWrap: "mt-4",
+        button: "mt-4 flex h-12 w-full items-center justify-center gap-3 rounded-xl bg-[#FF6B4A] text-base font-semibold text-white shadow-[0_10px_24px_rgba(255,107,74,0.28)] transition active:scale-[0.99] disabled:cursor-wait disabled:opacity-60",
         arrow: "text-base sm:text-lg",
         note: "mt-3 flex items-center justify-center gap-2 text-center text-[11px] leading-4 text-[#64748B] sm:text-xs",
         half: "",
-        full: "sm:col-span-2",
+        full: "col-span-2",
     },
 };
 
-// Date/time pickers ignore placeholders, so the field shows its label as text
-// until it is focused or filled, then becomes the native picker. Dates start
-// from today (a booking can't be in the past).
-function PickerInput({ common, field, placeholder, value, onChange, className }) {
-    const [active, setActive] = useState(false);
-    const type = { datetime: "datetime-local" }[field.type] || field.type;
-    const min = field.type === "date" ? new Date().toISOString().slice(0, 10) : undefined;
+const LABEL = "mb-1 block text-[13px] font-semibold text-[#123A5C]";
+// Options are pill buttons: the whole pill is the hit area, not a 13px box.
+const CHIP =
+    "inline-flex min-h-10 cursor-pointer select-none items-center justify-center gap-2 rounded-xl border border-[#DCE6F2] bg-white px-3.5 py-1.5 text-sm font-medium text-[#123A5C] transition hover:border-[#0F9E86] hover:bg-[#F2FBF9] has-[:checked]:border-[#0F9E86] has-[:checked]:bg-[#E8F7F4] has-[:checked]:text-[#0B6B5B] has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-[#0F9E86]/40";
+// A select with this many options or fewer shows them all as one-click pills;
+// longer lists stay a compact dropdown.
+const MAX_CHIPS = 4;
+// Quick-pick working days offered for a date field.
+const QUICK_DAYS = 6;
+
+const AUTOCOMPLETE = { name: "name", full_name: "name", email: "email", phone: "tel", tel: "tel", company: "organization", business_name: "organization" };
+
+function localDate(date) {
+    const pad = (n) => String(n).padStart(2, "0");
+    return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+}
+
+// The next few working days (from tomorrow), as one-click choices.
+function upcomingWorkdays(count) {
+    const days = [];
+    const day = new Date();
+    while (days.length < count) {
+        day.setDate(day.getDate() + 1);
+        if (day.getDay() === 0 || day.getDay() === 6) continue;
+        days.push({
+            value: localDate(day),
+            weekday: day.toLocaleDateString("en-GB", { weekday: "short" }),
+            date: day.toLocaleDateString("en-GB", { day: "numeric", month: "short" }),
+        });
+    }
+    return days;
+}
+
+// Placeholder text only when it says more than the visible label does.
+function hintFor(field) {
+    const clean = (s) => String(s || "").replace(/\*/g, "").trim().toLowerCase();
+    return field.placeholder && clean(field.placeholder) !== clean(field.label) ? field.placeholder : "";
+}
+
+// The form reads as three short steps. A field can name its step with
+// `group`; otherwise its type decides. Headings are definition.groups.*.
+const GROUP_ORDER = ["details", "needs", "time"];
+function groupOf(field) {
+    if (GROUP_ORDER.includes(field.group)) return field.group;
+    if (field.type === "checkboxes" || field.type === "multiselect") return "needs";
+    if (["date", "time", "datetime", "radio"].includes(field.type) || /(^|_)(date|time|meet)/.test(field.name)) return "time";
+    return "details";
+}
+
+// Controls that always take a whole row.
+function isWide(field) {
+    return field.width === "full" || ["textarea", "checkboxes", "multiselect", "radio", "date"].includes(field.type);
+}
+
+function DateField({ common, field, value, onChange, onBlur, className }) {
+    const [days, setDays] = useState([]);
+    // Built after mount so the server and browser never disagree on "today".
+    useEffect(() => setDays(upcomingWorkdays(QUICK_DAYS)), []);
+    const quick = days.some((d) => d.value === value);
     return (
-        <input
-            {...common}
-            type={active || value ? type : "text"}
-            min={min}
-            placeholder={placeholder}
-            value={value}
-            onFocus={() => setActive(true)}
-            onBlur={() => setActive(false)}
-            onChange={(e) => onChange(e.target.value)}
-            className={className}
-        />
+        <div className="space-y-2">
+            <div className="grid grid-cols-3 gap-2 sm:grid-cols-6">
+                {days.map((d, index) => (
+                    <label key={index} className={`${CHIP} flex-col gap-0 px-2 py-1.5 leading-tight`}>
+                        <input type="radio" name={`${field.name}-quick`} value={d.value} checked={value === d.value} onChange={() => onChange(d.value)} className="sr-only" />
+                        <span className="text-[11px] font-semibold uppercase tracking-wide text-[#64748B]">{d.weekday}</span>
+                        <span>{d.date}</span>
+                    </label>
+                ))}
+            </div>
+            <input
+                {...common}
+                type="date"
+                min={localDate(new Date())}
+                value={value}
+                onChange={(e) => onChange(e.target.value)}
+                onBlur={onBlur}
+                // Clicking anywhere in the box opens the calendar, not just the icon.
+                onClick={(e) => e.currentTarget.showPicker?.()}
+                className={`${className} cursor-pointer ${quick ? "text-[#94A3B8]" : ""}`}
+            />
+        </div>
     );
 }
 
-function Field({ field, value, error, onChange, styles, idPrefix }) {
+function Field({ field, index, E, value, error, onChange, onBlur, styles, idPrefix, span }) {
     const id = `${idPrefix}-${field.name}`;
     const errorId = error ? `${id}-error` : undefined;
-    const invalid = error ? "border-[#E5484D] focus:border-[#E5484D]" : "";
+    const invalid = error ? "border-[#E5484D] focus:border-[#E5484D] focus:ring-[#E5484D]/20" : "";
+    const base = `fields.${index}`;
     const common = {
         id,
         name: field.name,
-        "aria-label": field.label || field.placeholder || field.name,
         "aria-invalid": error ? true : undefined,
         "aria-describedby": errorId,
+        "aria-required": field.required || undefined,
     };
-    const placeholder = field.placeholder || `${field.label || field.name}${field.required ? " *" : ""}`;
+    const placeholder = hintFor(field);
     const options = optionList(field);
+    // Option text is edited in place; object options keep their label.
+    const optionPath = (i) => (typeof field.options[i] === "object" ? `${base}.options.${i}.label` : `${base}.options.${i}`);
+    const label = (
+        <>
+            <E.Text path={`${base}.label`} />
+            {field.required ? <span className="text-[#FF6B4A]">{" *"}</span> : null}
+        </>
+    );
+    const chips = (type, isChecked, toggle) => (
+        <fieldset aria-describedby={errorId} aria-invalid={error ? true : undefined}>
+            <legend className={LABEL}>{label}</legend>
+            {/* Tick-boxes sit in two even columns, so a long list stays short. */}
+            <div className={type === "checkbox" ? "grid grid-cols-2 gap-2" : "flex flex-wrap gap-2"}>
+                {options.map((o, i) => (
+                    <label key={i} className={`${CHIP} ${type === "checkbox" ? "justify-start px-3 text-left text-[13px] leading-snug sm:text-sm" : ""} ${error ? "border-[#F4B4B4]" : ""}`}>
+                        <input type={type} name={field.name} value={o.value} checked={isChecked(o.value)} onChange={() => toggle(o.value)} onBlur={onBlur} className="sr-only" />
+                        {type === "checkbox" ? (
+                            <span aria-hidden="true" className="flex h-4 w-4 shrink-0 items-center justify-center rounded border border-current text-[10px] leading-none">
+                                {isChecked(o.value) ? "✓" : ""}
+                            </span>
+                        ) : null}
+                        <E.Text path={optionPath(i)} />
+                    </label>
+                ))}
+            </div>
+        </fieldset>
+    );
 
     let control;
+    let labelled = true;
     switch (field.type) {
         case "textarea":
-            control = <textarea {...common} placeholder={placeholder} value={value} onChange={(e) => onChange(e.target.value)} className={`${styles.textarea} ${invalid}`} />;
+            control = <textarea {...common} placeholder={placeholder} value={value} onChange={(e) => onChange(e.target.value)} onBlur={onBlur} className={`${styles.textarea} ${invalid}`} />;
             break;
         case "select":
+            if (options.length && options.length <= MAX_CHIPS) {
+                labelled = false;
+                control = chips("radio", (v) => value === v, (v) => onChange(v));
+                break;
+            }
             control = (
-                <select {...common} value={value} onChange={(e) => onChange(e.target.value)} className={`${styles.input} ${invalid} ${value ? "" : "text-[#94A3B8]"}`}>
-                    <option value="">{placeholder}</option>
-                    {options.map((o, index) => <option key={index} value={o.value}>{o.label}</option>)}
+                <select {...common} value={value} onChange={(e) => onChange(e.target.value)} onBlur={onBlur} className={`${styles.input} cursor-pointer ${invalid} ${value ? "" : "text-[#94A3B8]"}`}>
+                    <option value="">{placeholder || field.label}</option>
+                    {options.map((o, i) => <option key={i} value={o.value}>{o.label}</option>)}
                 </select>
             );
             break;
         case "multiselect":
-            control = (
-                <select {...common} multiple value={value} onChange={(e) => onChange(Array.from(e.target.selectedOptions, (o) => o.value))} className={`${styles.input} h-auto min-h-[88px] py-2 ${invalid}`}>
-                    {options.map((o, index) => <option key={index} value={o.value}>{o.label}</option>)}
-                </select>
-            );
+        case "checkboxes":
+            labelled = false;
+            control = chips("checkbox", (v) => value.includes(v), (v) => onChange(value.includes(v) ? value.filter((x) => x !== v) : [...value, v]));
             break;
         case "radio":
-        case "checkboxes":
-            control = (
-                <fieldset aria-describedby={errorId} className="rounded-xl border border-[#DCE6F2] px-4 py-3 text-sm text-[#123A5C]">
-                    <legend className="px-1 text-xs font-semibold text-[#64748B]">{field.label}{field.required ? " *" : ""}</legend>
-                    <div className="flex flex-wrap gap-x-4 gap-y-2">
-                        {options.map((o, index) => {
-                            const checked = field.type === "radio" ? value === o.value : value.includes(o.value);
-                            return (
-                                <label key={index} className="flex items-center gap-2">
-                                    <input
-                                        type={field.type === "radio" ? "radio" : "checkbox"}
-                                        name={field.name}
-                                        value={o.value}
-                                        checked={checked}
-                                        onChange={() =>
-                                            onChange(field.type === "radio" ? o.value : checked ? value.filter((v) => v !== o.value) : [...value, o.value])
-                                        }
-                                    />
-                                    {o.label}
-                                </label>
-                            );
-                        })}
-                    </div>
-                </fieldset>
-            );
+            labelled = false;
+            control = chips("radio", (v) => value === v, (v) => onChange(v));
             break;
         case "consent_marketing":
-            control = (
-                <label className="flex items-start gap-2 text-sm text-[#475569]">
-                    <input {...common} type="checkbox" checked={value === true} data-cms-field="consent_marketing" onChange={(e) => onChange(e.target.checked)} className="mt-1" />
-                    <span>{field.label}</span>
-                </label>
-            );
-            break;
         case "checkbox":
+            labelled = false;
             control = (
-                <label className="flex items-start gap-2 text-sm text-[#475569]">
-                    <input {...common} type="checkbox" checked={!!value} onChange={(e) => onChange(e.target.checked)} className="mt-1" />
-                    <span>{field.label}{field.required ? " *" : ""}</span>
+                <label className="flex cursor-pointer items-start gap-3 rounded-xl px-1 py-0.5 text-sm text-[#475569]">
+                    <input
+                        {...common}
+                        type="checkbox"
+                        checked={field.type === "consent_marketing" ? value === true : !!value}
+                        data-cms-field={field.type === "consent_marketing" ? "consent_marketing" : undefined}
+                        onChange={(e) => onChange(e.target.checked)}
+                        className="mt-0.5 h-5 w-5 shrink-0 cursor-pointer accent-[#0F9E86]"
+                    />
+                    <span>{label}</span>
                 </label>
             );
             break;
         case "rating":
             control = (
-                <div className="flex items-center gap-1" role="radiogroup" aria-label={field.label}>
-                    {[1, 2, 3, 4, 5].map((n, index) => (
-                        <button key={index} type="button" role="radio" aria-checked={Number(value) === n} onClick={() => onChange(n)} className={`text-2xl ${Number(value) >= n ? "text-[#FF6B4A]" : "text-[#CBD5E1]"}`}>
+                <div className="flex items-center gap-1" role="radiogroup" aria-labelledby={`${id}-label`}>
+                    {[1, 2, 3, 4, 5].map((n, i) => (
+                        <button key={i} type="button" role="radio" aria-checked={Number(value) === n} onClick={() => onChange(n)} className={`h-11 w-11 text-2xl ${Number(value) >= n ? "text-[#FF6B4A]" : "text-[#CBD5E1]"}`}>
                             ★
                         </button>
                     ))}
@@ -203,36 +283,62 @@ function Field({ field, value, error, onChange, styles, idPrefix }) {
         case "range": {
             const v = field.validation || {};
             control = (
-                <label className="block text-sm text-[#475569]">
-                    {field.label}: <strong>{value || v.min || 0}</strong>
+                <div className="flex items-center gap-3 text-sm text-[#475569]">
                     <input {...common} type="range" min={v.min ?? 0} max={v.max ?? 100} step={v.step ?? 1} value={value || v.min || 0} onChange={(e) => onChange(Number(e.target.value))} className="w-full accent-[#0F9E86]" />
-                </label>
+                    <strong>{value || v.min || 0}</strong>
+                </div>
             );
             break;
         }
         case "file":
             control = (
-                <input {...common} type="file" onChange={(e) => onChange(e.target.files?.[0]?.name || "")} className={`${styles.input} py-2 file:mr-3 file:rounded-md file:border-0 file:bg-[#E2E8F0] file:px-3 file:py-1`} />
+                <input {...common} type="file" onChange={(e) => onChange(e.target.files?.[0]?.name || "")} className={`${styles.input} cursor-pointer py-2 file:mr-3 file:rounded-md file:border-0 file:bg-[#E2E8F0] file:px-3 file:py-1`} />
             );
             break;
         case "hidden":
             return <input type="hidden" name={field.name} value={value} />;
         case "date":
+            control = <DateField common={common} field={field} value={value} onChange={onChange} onBlur={onBlur} className={`${styles.input} ${invalid}`} />;
+            break;
         case "time":
         case "datetime":
-            control = <PickerInput common={common} field={field} placeholder={placeholder} value={value} onChange={onChange} className={`${styles.input} ${invalid}`} />;
+            control = (
+                <input
+                    {...common}
+                    type={field.type === "datetime" ? "datetime-local" : "time"}
+                    value={value}
+                    onChange={(e) => onChange(e.target.value)}
+                    onBlur={onBlur}
+                    onClick={(e) => e.currentTarget.showPicker?.()}
+                    className={`${styles.input} cursor-pointer ${invalid}`}
+                />
+            );
             break;
         default: {
             const type = field.type || "text";
-            control = <input {...common} type={type} placeholder={placeholder} value={value} onChange={(e) => onChange(e.target.value)} className={`${styles.input} ${invalid}`} />;
+            control = (
+                <input
+                    {...common}
+                    type={type}
+                    placeholder={placeholder}
+                    value={value}
+                    autoComplete={AUTOCOMPLETE[field.name] || { email: "email", tel: "tel", url: "url" }[type]}
+                    inputMode={{ email: "email", tel: "tel", number: "numeric", url: "url" }[type]}
+                    onChange={(e) => onChange(e.target.value)}
+                    onBlur={onBlur}
+                    className={`${styles.input} ${invalid}`}
+                />
+            );
         }
     }
 
+    const wide = span || isWide(field) || !labelled;
     return (
-        <div className={field.width === "full" || field.type === "textarea" ? styles.full : styles.half}>
+        <div className={wide ? styles.full : styles.half} data-field={field.name}>
+            {labelled ? <label id={`${id}-label`} htmlFor={id} className={LABEL}>{label}</label> : null}
             {control}
-            {field.help ? <p className="mt-1 text-[11px] text-[#64748B]">{field.help}</p> : null}
-            {error ? <p id={errorId} className="mt-1 text-[12px] text-[#D92D20]">{error}</p> : null}
+            {field.help ? <p className="mt-1 text-[11px] text-[#64748B]"><E.Text path={`${base}.help`} /></p> : null}
+            {error ? <p id={errorId} role="alert" className="mt-1.5 text-[12px] font-medium text-[#D92D20]">{error}</p> : null}
         </div>
     );
 }
@@ -246,19 +352,43 @@ export default function QuoteForm({ variant = "desktop" }) {
     const styles = STYLES[variant];
     const fields = definition.fields || [];
     const honeypot = definition.honeypotField || "website";
+    const formRef = useRef(null);
+    const router = useRouter();
 
     const [values, setValues] = useState({});
     const [errors, setErrors] = useState({});
+    const [touched, setTouched] = useState({});
     const [status, setStatus] = useState({ state: "idle", message: "" });
 
     const valueOf = (field) => values[field.name] ?? emptyValue(field);
+    const currentValues = (overrides = {}) => {
+        const all = {};
+        for (const field of fields) all[field.name] = valueOf(field);
+        return { ...all, consent: values.consent, ...overrides };
+    };
+    // Once a field has been left (or a submit tried), it re-checks as you
+    // type, so an error clears the moment it is fixed.
     const setValue = (name, value) => {
         setValues((prev) => ({ ...prev, [name]: value }));
-        setErrors((prev) => ({ ...prev, [name]: undefined }));
+        setErrors((prev) => ({ ...prev, [name]: touched[name] ? clientErrors(definition, currentValues({ [name]: value }))[name] : undefined }));
+    };
+    const blurField = (name) => {
+        setTouched((prev) => ({ ...prev, [name]: true }));
+        setErrors((prev) => ({ ...prev, [name]: clientErrors(definition, currentValues())[name] }));
+    };
+
+    // Take the visitor straight to the first field that needs attention.
+    const showFirstError = (found) => {
+        const first = fields.find((f) => found[f.name]);
+        if (!first) return;
+        const box = formRef.current?.querySelector(`[data-field="${first.name}"]`);
+        box?.scrollIntoView({ behavior: "smooth", block: "center" });
+        box?.querySelector("input:not([type=hidden]), select, textarea")?.focus({ preventScroll: true });
     };
 
     async function onSubmit(event) {
         event.preventDefault();
+        if (status.state === "sending" || status.state === "done") return;
 
         const payload = {};
         for (const field of fields) payload[field.name] = valueOf(field);
@@ -268,7 +398,9 @@ export default function QuoteForm({ variant = "desktop" }) {
         const found = clientErrors(definition, payload);
         if (Object.keys(found).length) {
             setErrors(found);
+            setTouched(Object.fromEntries(fields.map((f) => [f.name, true])));
             setStatus({ state: "error", message: definition.errorMessage });
+            showFirstError(found);
             return;
         }
 
@@ -277,7 +409,8 @@ export default function QuoteForm({ variant = "desktop" }) {
         // the generate_lead event — see lib/forms.js.
         const result = await submitForm(FORM_NAME, payload, { honeypotField: honeypot });
         if (!result.ok) {
-            setErrors(result.errors);
+            setErrors(result.errors || {});
+            showFirstError(result.errors || {});
             const message = result.status === 429
                 ? "Too many requests — please wait a minute and try again."
                 : result.status === 0
@@ -286,51 +419,91 @@ export default function QuoteForm({ variant = "desktop" }) {
             setStatus({ state: "error", message });
             return;
         }
-        setValues({});
-        setErrors({});
-        setStatus({ state: "done", message: definition.successMessage });
+        // Stored and emailed: the booking is complete. The thank-you page is
+        // its own page; its "How did you hear about us?" is a separate,
+        // optional follow-up that only refers back to this booking.
+        const answers = [];
+        for (const field of fields) {
+            if (["hidden", "textarea", "consent_marketing"].includes(field.type)) continue;
+            let value = payload[field.name];
+            if (field.type === "checkbox") value = value ? "Yes" : "";
+            if (value === "" || value === undefined || value === null || (Array.isArray(value) && !value.length)) continue;
+            answers.push({ name: field.name, label: field.label || field.name, value: Array.isArray(value) ? value.join(", ") : String(value) });
+        }
+        saveBookingRef({ sentAt: new Date().toLocaleString("en-GB", { dateStyle: "medium", timeStyle: "short" }), answers });
+        setStatus({ state: "done", message: "" });
+        router.push(THANK_YOU_PATH);
     }
 
-    const shortFields = fields.filter((f) => f.type !== "textarea" && f.type !== "hidden");
-    const longFields = fields.filter((f) => f.type === "textarea");
-    const hiddenFields = fields.filter((f) => f.type === "hidden");
+    const indexed = fields.map((field, index) => ({ field, index }));
+    const longFields = indexed.filter(({ field }) => field.type === "textarea");
+    const hiddenFields = indexed.filter(({ field }) => field.type === "hidden");
+    // The marketing opt-in is not a step: it sits just above the button.
+    const optIns = indexed.filter(({ field }) => field.type === "consent_marketing");
+    const groups = GROUP_ORDER.map((key) => {
+        const all = indexed.filter(({ field }) => !["textarea", "hidden", "consent_marketing"].includes(field.type) && groupOf(field) === key);
+        // Inputs that sit two to a row (not pills, not full-width controls)
+        // come first, so a row of pills never splits a pair.
+        const pairs = ({ field }) => {
+            const chips = field.type === "select" && optionList(field).length > 0 && optionList(field).length <= MAX_CHIPS;
+            return !isWide(field) && !chips && field.type !== "checkbox" && field.type !== "consent_marketing";
+        };
+        const pairable = all.filter(pairs);
+        const items = [...pairable, ...all.filter((item) => !pairs(item))];
+        // With an odd number, the last one takes the whole row.
+        const spanLast = pairable.length % 2 === 1 ? pairable[pairable.length - 1].index : -1;
+        return { key, items, spanLast };
+    }).filter((group) => group.items.length);
     const idPrefix = `quote-${variant}`;
-
-    if (status.state === "done") {
-        return (
-            <div className="relative">
-                {editButton}
-                <div role="status" className="mt-5 rounded-2xl bg-[#ECFDF3] px-5 py-6 text-center text-sm leading-6 text-[#067647]">
-                    <p className="text-base font-semibold"><E.Text path="successTitle" /></p>
-                    <p className="mt-1"><E.Text path="successMessage" multiline /></p>
-                </div>
-                <button type="button" onClick={() => setStatus({ state: "idle", message: "" })} className="mt-3 w-full text-center text-xs font-semibold text-[#0F9E86] hover:underline">
-                    <E.Text path="resetText" />
-                </button>
-            </div>
-        );
-    }
+    const fieldProps = ({ field, index }) => ({
+        field,
+        index,
+        E,
+        value: valueOf(field),
+        error: errors[field.name],
+        onChange: (v) => setValue(field.name, v),
+        onBlur: () => blurField(field.name),
+        idPrefix,
+    });
 
     // Hidden by an admin: nothing is rendered for visitors.
     if (hidden) return null;
 
+    const busy = status.state === "sending" || status.state === "done";
+
     return (
-        <form onSubmit={onSubmit} noValidate className="relative" aria-label="Book a free consultation" data-cms-form={FORM_NAME}>
+        <form ref={formRef} onSubmit={onSubmit} noValidate className="relative" aria-label="Book a free consultation" data-cms-form={FORM_NAME}>
             {editButton}
 
-            <div className={styles.grid}>
-                {shortFields.map((field, index) => (
-                    <Field key={index} field={field} value={valueOf(field)} error={errors[field.name]} onChange={(v) => setValue(field.name, v)} styles={styles} idPrefix={idPrefix} />
-                ))}
-            </div>
+            {groups.map((group, step) => (
+                <section key={step} aria-labelledby={`${idPrefix}-step-${group.key}`} className={step ? "mt-4 border-t border-[#E8EEF5] pt-4" : styles.stepFirst}>
+                    <p id={`${idPrefix}-step-${group.key}`} className="flex items-center gap-2.5 text-[12px] font-bold uppercase tracking-[0.14em] text-[#0F9E86]">
+                        <span aria-hidden="true" className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[#E8F7F4] text-[12px] tracking-normal text-[#0B6B5B]">
+                            {step + 1}
+                        </span>
+                        <E.Text path={`groups.${group.key}`} />
+                    </p>
+                    <div className={styles.grid}>
+                        {group.items.map((item, index) => (
+                            <Field key={index} {...fieldProps(item)} styles={styles} span={item.index === group.spanLast} />
+                        ))}
+                    </div>
+                </section>
+            ))}
 
-            {longFields.map((field, index) => (
+            {longFields.map((item, index) => (
                 <div key={index} className={styles.textareaWrap}>
-                    <Field field={{ ...field, width: "full" }} value={valueOf(field)} error={errors[field.name]} onChange={(v) => setValue(field.name, v)} styles={{ ...styles, full: "" }} idPrefix={idPrefix} />
+                    <Field {...fieldProps({ ...item, field: { ...item.field, width: "full" } })} styles={{ ...styles, full: "" }} />
                 </div>
             ))}
 
-            {hiddenFields.map((field, index) => (
+            {optIns.map((item, index) => (
+                <div key={index} className="mt-3">
+                    <Field {...fieldProps(item)} styles={{ ...styles, full: "" }} />
+                </div>
+            ))}
+
+            {hiddenFields.map(({ field }, index) => (
                 <input key={index} type="hidden" name={field.name} value={valueOf(field)} />
             ))}
 
@@ -343,25 +516,28 @@ export default function QuoteForm({ variant = "desktop" }) {
             </div>
 
             {definition.consent?.required ? (
-                <label className="mt-3 flex items-start gap-2 text-xs leading-5 text-[#475569]">
-                    <input type="checkbox" checked={!!values.consent} onChange={(e) => setValue("consent", e.target.checked)} className="mt-0.5" />
-                    <span>{definition.consent.text}</span>
+                <label className="mt-4 flex cursor-pointer items-start gap-3 text-xs leading-5 text-[#475569]">
+                    <input type="checkbox" checked={!!values.consent} onChange={(e) => setValue("consent", e.target.checked)} className="mt-0.5 h-5 w-5 shrink-0 cursor-pointer accent-[#0F9E86]" />
+                    <span><E.Text path="consent.text" /></span>
                 </label>
             ) : null}
-            {errors.consent ? <p className="mt-1 text-[12px] text-[#D92D20]">{errors.consent}</p> : null}
+            {errors.consent ? <p role="alert" className="mt-1 text-[12px] text-[#D92D20]">{errors.consent}</p> : null}
 
-            <button type="submit" disabled={status.state === "sending"} className={styles.button}>
-                {status.state === "sending" ? "Sending…" : definition.submitText}
-                <FaArrowRight className={styles.arrow} />
+            <button type="submit" disabled={busy} aria-busy={busy} className={styles.button}>
+                {busy ? (
+                    <span aria-hidden="true" className="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white" />
+                ) : null}
+                <E.Text path="submitText" />
+                {busy ? null : <FaArrowRight className={styles.arrow} />}
             </button>
 
-            {status.state === "error" && status.message ? (
+            {status.state === "error" && status.message && (Object.values(errors).some(Boolean) || !Object.keys(errors).length) ? (
                 <p role="alert" className="mt-2 text-center text-[12px] text-[#D92D20]">{status.message}</p>
             ) : null}
 
             <div className={styles.note}>
                 <FaLock className="shrink-0" />
-                <span>{definition.privacyNote}</span>
+                <span><E.Text path="privacyNote" /></span>
             </div>
         </form>
     );

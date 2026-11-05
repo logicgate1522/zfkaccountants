@@ -15,8 +15,9 @@ export default function FAQHero() {
         <section
             className="
             relative
-            h-[270px]
+            min-h-[270px]
             bg-[#123A5C]
+            pb-10
             overflow-hidden
             "
         >
@@ -62,75 +63,8 @@ export default function FAQHero() {
             >
 
 
-                {/* Sits under the site's fixed header; spacer only. */}
-                <nav
-                    aria-hidden="true"
-                    inert
-                    className="
-                    flex
-                    justify-between
-                    items-center
-                    text-white
-                    "
-                >
-
-                    <div className="font-bold text-xl">
-                        ZFK{" "}
-                        <span className="text-[#0F9E86]">
-                            Accountants
-                        </span>
-                    </div>
-
-
-                    <div className="
-                    flex
-                    gap-8
-                    items-center
-                    text-sm
-                    font-medium
-                    ">
-
-                        {
-                            [
-                                "Home",
-                                "About Us",
-                                "Services",
-                                "Resources / Blog",
-                                "FAQs",
-                                "Contact"
-                            ].map((item, index) => (
-                                <span
-                                    key={index}
-                                    className={
-                                        item === "FAQs"
-                                            ?
-                                            "text-[#0F9E86]"
-                                            :
-                                            ""
-                                    }
-                                >
-                                    {item}
-                                </span>
-                            ))
-                        }
-
-
-                        <button
-                            className="
-                        bg-[#FF6B4A]
-                        px-6
-                        py-3
-                        rounded-xl
-                        "
-                        >
-                            Book a Consultation
-                        </button>
-
-
-                    </div>
-
-
-                </nav>
+                {/* Space for the site's fixed header. */}
+                <div aria-hidden="true" className="h-11" />
 
 
 

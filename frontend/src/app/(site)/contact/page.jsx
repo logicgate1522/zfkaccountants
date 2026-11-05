@@ -7,7 +7,7 @@ import { pageMetadata } from "@/lib/seo";
 const fallbackMetadata = {
     title: "Book a Free Consultation with Online UK Accountants",
     description:
-        "Book a free, no-obligation video consultation with ZFK Accountants. Choose a time that suits you and get a quote tailored to your business.",
+        "Book a free, no-obligation video consultation with ZFK Accountants. Send your details and get a quote tailored to your business.",
 };
 
 

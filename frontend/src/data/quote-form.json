@@ -34,9 +34,19 @@
             "name": "phone",
             "type": "tel",
             "label": "Phone number",
-            "placeholder": "Phone (only if you'd like a call)",
-            "required": false,
+            "placeholder": "Phone number *",
+            "required": true,
             "width": "half",
+            "help": "",
+            "options": []
+        },
+        {
+            "name": "whatsapp",
+            "type": "checkbox",
+            "label": "This number is available on WhatsApp",
+            "placeholder": "",
+            "required": false,
+            "width": "full",
             "help": "",
             "options": []
         },
@@ -51,37 +61,6 @@
             "options": ["Quarterly VAT returns", "Monthly payroll", "Annual accounts & Corporation Tax", "Self Assessment"]
         },
         {
-            "name": "preferred_date",
-            "type": "date",
-            "label": "Preferred date",
-            "placeholder": "Preferred date *",
-            "required": true,
-            "width": "half",
-            "help": "",
-            "options": []
-        },
-        {
-            "name": "preferred_time",
-            "type": "select",
-            "label": "Preferred time",
-            "placeholder": "Preferred time *",
-            "required": true,
-            "width": "half",
-            "help": "",
-            "options": ["Morning", "Afternoon"]
-        },
-        {
-            "name": "meeting",
-            "type": "radio",
-            "label": "How would you like to meet?",
-            "placeholder": "",
-            "required": true,
-            "width": "full",
-            "help": "",
-            "default": "Video call",
-            "options": ["Video call", "Phone call"]
-        },
-        {
             "name": "message",
             "type": "textarea",
             "label": "About your business",
@@ -92,8 +71,12 @@
             "options": []
         }
     ],
+    "groups": {
+        "details": "Your details",
+        "needs": "What you need help with"
+    },
     "submitText": "Book My Free Consultation",
-    "successMessage": "Thank you. We'll email you within one working day to confirm your consultation and send the call details.",
+    "successMessage": "Thank you. We will be in touch within one working day to arrange your free consultation.",
     "successTitle": "Consultation requested",
     "resetText": "Book another consultation",
     "errorMessage": "Please check the highlighted fields and try again.",

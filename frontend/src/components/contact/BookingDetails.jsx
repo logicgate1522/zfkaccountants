@@ -18,12 +18,12 @@ const defaults = {
         "We work with clients right across the UK, entirely online. Booking takes a minute, and there's no obligation at any point.",
     steps: [
         {
-            title: "Book a time",
-            text: "Choose a date and time that suits you using the booking form, and tell us which services you're interested in.",
+            title: "Send your details",
+            text: "Leave your name, email and phone number, and tell us which services you're interested in.",
         },
         {
-            title: "We confirm by email",
-            text: "We'll email you within one working day to confirm your consultation and send the video call details.",
+            title: "We get in touch",
+            text: "We'll contact you within one working day, by email, phone or WhatsApp, to arrange a time that suits you.",
         },
         {
             title: "Your free consultation",

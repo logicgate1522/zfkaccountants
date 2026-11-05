@@ -3,12 +3,10 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 
-import BrandLogo from "@/components/layout/BrandLogo";
 import { AnimatePresence, motion } from "framer-motion";
 
 import {
     FaArrowRight,
-    FaBars,
     FaChevronRight,
     FaSearch,
 } from "react-icons/fa";
@@ -50,50 +48,8 @@ export default function FAQMobile() {
         <main className="min-h-[var(--ae-vh)] overflow-hidden bg-white lg:hidden">
             {/* ================= MOBILE NAVBAR ================= */}
 
-            {/* Sits under the site's fixed header; spacer only. */}
-            <header
-                aria-hidden="true"
-                inert
-                className="
-                    flex
-                    h-[clamp(64px,9svh,78px)]
-                    items-center
-                    justify-between
-                    bg-gradient-to-r
-                    from-[#061F38]
-                    via-[#082D4D]
-                    to-[#061F38]
-                    px-5
-                    text-white
-                "
-            >
-                <Link
-                    href="/"
-                    className="
-                        text-[clamp(19px,5.6vw,26px)]
-                        font-extrabold
-                        tracking-[-0.04em]
-                    "
-                >
-                    <BrandLogo className="h-[clamp(18px,5vw,24px)] w-auto" priority />
-                </Link>
-
-                <button
-                    type="button"
-                    aria-label="Open navigation menu"
-                    className="
-                        flex
-                        h-11
-                        w-11
-                        items-center
-                        justify-center
-                        text-[25px]
-                        text-white
-                    "
-                >
-                    <FaBars />
-                </button>
-            </header>
+            {/* Space for the site's fixed header. */}
+            <div aria-hidden="true" className="h-[clamp(64px,9svh,78px)] bg-[#061F38]" />
 
             {/* ================= MOBILE HERO ================= */}
 
