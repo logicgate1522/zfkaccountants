@@ -46,11 +46,34 @@ def fill_missing(current, defaults):
     return merged
 
 
+def _sync_fields(data, fields):
+    if not isinstance(data, dict) or not data:
+        return data, False
+    if data.get("fields") == fields:
+        return data, False
+    return {**data, "fields": deepcopy(fields)}, True
+
+
 class Command(BaseCommand):
     help = "Seed baseline CMS content and conversions once without overwriting admin edits."
 
     def add_arguments(self, parser):
         parser.add_argument("--manifest", type=Path, default=DEFAULT_MANIFEST)
+
+    def _sync_form_fields(self, form):
+        """Replace the quote form's field list (published and draft) with
+        the manifest's. Other keys (button text, messages) stay as edited."""
+        fields = form.get("fields")
+        if not isinstance(fields, list):
+            return
+        row = ComponentData.objects.filter(name="form-quote").first()
+        if row is None:
+            return
+        row.data, changed = _sync_fields(row.data, fields)
+        row.draft_data, draft_changed = _sync_fields(row.draft_data, fields)
+        if changed or draft_changed:
+            row.save()
+            self.stdout.write("Quote form fields synced from code.")
 
     def handle(self, *args, **options):
         path = options["manifest"]
@@ -68,6 +91,10 @@ class Command(BaseCommand):
             site, _ = SiteSettings.objects.select_for_update().get_or_create(pk=1, defaults={"data": {}})
             current = site.data or {}
             previous_version = int(current.get(SEED_MARKER) or 0)
+            # A site that owns its form's fields in code says so in the
+            # manifest; every release then makes the stored list match.
+            if manifest.get("formFieldsFromCode"):
+                self._sync_form_fields(manifest["form"])
             if previous_version >= version:
                 self.stdout.write(f"CMS defaults already installed (version {version}); kept all existing data.")
                 return

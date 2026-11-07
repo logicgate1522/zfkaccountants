@@ -29,15 +29,10 @@ export const FORM_NAME = "quote";
 // Built-in definition; also what `npm run cms:seed` stores in the CMS.
 export const DEFAULT_QUOTE_FORM = quoteFormDefinition;
 
+// Fields are code-owned (src/data/quote-form.json); the panel edits only
+// the form's other copy and settings.
 const FIELD_HINTS = {
-    "fields[].type": {
-        type: "select",
-        options: ["text", "textarea", "email", "tel", "url", "number", "date", "time", "datetime", "select", "multiselect", "radio", "checkbox", "checkboxes", "consent_marketing", "file", "hidden", "rating", "range"],
-    },
-    "fields[].width": { type: "select", options: ["half", "full"] },
-    "fields[].name": { label: "Field key (letters, numbers, _)" },
-    "fields[].options": { label: "Options (select / radio / checkboxes)" },
-    "fields[].attachTo": { label: "Show beside field (its key, e.g. phone)" },
+    fields: { label: "Fields (set in code; changes here are replaced on the next release)" },
     honeypotField: { label: "Honeypot field name (spam trap)" },
 };
 
@@ -233,7 +228,6 @@ function Field({ field, index, E, value, error, onChange, onBlur, styles, idPref
     const id = `${idPrefix}-${field.name}`;
     const errorId = error ? `${id}-error` : undefined;
     const invalid = error ? "border-[#E5484D] focus:border-[#E5484D] focus:ring-[#E5484D]/20" : "";
-    const base = `fields.${index}`;
     const common = {
         id,
         name: field.name,
@@ -243,11 +237,10 @@ function Field({ field, index, E, value, error, onChange, onBlur, styles, idPref
     };
     const placeholder = hintFor(field);
     const options = optionList(field);
-    // Option text is edited in place; object options keep their label.
-    const optionPath = (i) => (typeof field.options[i] === "object" ? `${base}.options.${i}.label` : `${base}.options.${i}`);
     const label = (
         <>
-            <E.Text path={`${base}.label`} />
+            {/* Field text is code-owned (src/data/quote-form.json), like the fields. */}
+            {field.label}
             {field.required ? <span className="text-[#FF6B4A]">{" *"}</span> : null}
             {!field.required && !["checkbox", "consent_marketing"].includes(field.type) ? (
                 <span className="ml-1 font-normal text-[#94A3B8]"><E.Text path="optionalText" /></span>
@@ -262,7 +255,7 @@ function Field({ field, index, E, value, error, onChange, onBlur, styles, idPref
                     <FaBullseye aria-hidden="true" className="shrink-0 text-[14px] text-[#0F9E86]" />
                     <span>{label}</span>
                 </legend>
-                {field.help ? <p className="mt-0.5 text-[12px] text-[#64748B]"><E.Text path={`${base}.help`} /></p> : null}
+                {field.help ? <p className="mt-0.5 text-[12px] text-[#64748B]">{field.help}</p> : null}
                 <div className={`mt-2.5 ${styles.services}`}>
                     {options.map((o, i) => {
                         const Icon = serviceIcon(o.label);
@@ -276,7 +269,7 @@ function Field({ field, index, E, value, error, onChange, onBlur, styles, idPref
                                 <span aria-hidden="true" className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#E8F7F4] text-[14px] text-[#0F9E86]">
                                     <Icon />
                                 </span>
-                                <span className="min-w-0"><E.Text path={optionPath(i)} /></span>
+                                <span className="min-w-0">{o.label}</span>
                             </label>
                         );
                     })}
@@ -289,7 +282,7 @@ function Field({ field, index, E, value, error, onChange, onBlur, styles, idPref
                     {options.map((o, i) => (
                         <label key={i} className={`${CHIP} ${error ? "border-[#F4B4B4]" : ""}`}>
                             <input type={type} name={field.name} value={o.value} checked={isChecked(o.value)} onChange={() => toggle(o.value)} onBlur={onBlur} className="sr-only" />
-                            <E.Text path={optionPath(i)} />
+                            {o.label}
                         </label>
                     ))}
                 </div>
@@ -447,20 +440,25 @@ function Field({ field, index, E, value, error, onChange, onBlur, styles, idPref
                 </div>
             ) : null}
             {control}
-            {field.help && !tickList ? <p className="mt-1 text-[11px] text-[#64748B]"><E.Text path={`${base}.help`} /></p> : null}
+            {field.help && !tickList ? <p className="mt-1 text-[11px] text-[#64748B]">{field.help}</p> : null}
             {error ? <p id={errorId} role="alert" className="mt-1.5 text-[12px] font-medium text-[#D92D20]">{error}</p> : null}
         </div>
     );
 }
 
 export default function QuoteForm({ variant = "desktop" }) {
-    const { data: definition, E, editButton, hidden } = useCms(`form-${FORM_NAME}`, DEFAULT_QUOTE_FORM, {
+    const { data, E, editButton, hidden } = useCms(`form-${FORM_NAME}`, DEFAULT_QUOTE_FORM, {
         label: "Booking form",
         excludeFromKeywordAudit: true,
         fields: FIELD_HINTS,
     });
+    // The fields always come from code, never the CMS copy: every release
+    // also writes them into the CMS (formFieldsFromCode in seed-cms.mjs), so
+    // the server validates against exactly these. Button text and messages
+    // stay editable.
+    const definition = { ...data, fields: DEFAULT_QUOTE_FORM.fields };
     const styles = STYLES[variant];
-    const fields = definition.fields || [];
+    const fields = definition.fields;
     const honeypot = definition.honeypotField || "website";
     const formRef = useRef(null);
     const router = useRouter();
@@ -612,7 +610,7 @@ export default function QuoteForm({ variant = "desktop" }) {
                                             className="relative z-10 h-3.5 w-3.5 cursor-pointer accent-[#25D366]"
                                         />
                                         <FaWhatsapp aria-hidden="true" className="text-[14px] text-[#25D366]" />
-                                        <E.Text path={`fields.${extra.index}.label`} />
+                                        {extra.field.label}
                                     </label>
                                 ))}
                             />

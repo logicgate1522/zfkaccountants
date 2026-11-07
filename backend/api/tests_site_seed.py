@@ -110,6 +110,36 @@ class SiteSeedTests(TestCase):
         self.assertEqual(get_plan()["version"], 2)
         self.assertTrue(any(c["trigger"]["event"] == "generate_lead" for c in get_plan()["conversions"]))
 
+    def test_code_owned_form_fields_are_synced_every_release(self):
+        self.seed()
+        row = ComponentData.objects.get(name="form-quote")
+        row.data = {**row.data, "submitText": "Send", "fields": [{"name": "preferred_date", "type": "date", "required": True}]}
+        row.draft_data = {"fields": [{"name": "old"}], "submitText": "Draft send"}
+        row.save()
+
+        # Without the flag a later release keeps the admin's form as it is.
+        self.seed()
+        self.assertEqual(ComponentData.objects.get(name="form-quote").data["fields"][0]["name"], "preferred_date")
+
+        self.manifest.write_text(json.dumps({**MANIFEST, "formFieldsFromCode": True}), encoding="utf-8")
+        self.seed()
+        row = ComponentData.objects.get(name="form-quote")
+        self.assertEqual(row.data["fields"], MANIFEST["form"]["fields"])
+        self.assertEqual(row.draft_data["fields"], MANIFEST["form"]["fields"])
+        # Only the field list is code-owned; the admin's other copy stays.
+        self.assertEqual(row.data["submitText"], "Send")
+        self.assertEqual(row.draft_data["submitText"], "Draft send")
+
+    def test_code_owned_fields_validate_submissions(self):
+        self.manifest.write_text(json.dumps({**MANIFEST, "formFieldsFromCode": True}), encoding="utf-8")
+        self.seed()
+        row = ComponentData.objects.get(name="form-quote")
+        row.data = {**row.data, "fields": row.data["fields"] + [{"name": "preferred_date", "type": "date", "required": True}]}
+        row.save()
+        self.seed()
+        response = self.client.post("/api/forms/quote/submit/", {"email": "a@example.com", "services": ["Monthly payroll"]}, content_type="application/json")
+        self.assertEqual(response.status_code, 201, response.content)
+
     def test_full_export_installs_the_sites_baseline_plan(self):
         manifest = Path(settings.BASE_DIR) / "api" / "site_seed.json"
         if not manifest.is_file():
@@ -121,6 +151,11 @@ class SiteSeedTests(TestCase):
         # Exactly the site's own form definition, whatever fields it has.
         exported = json.loads(manifest.read_text(encoding="utf-8"))["form"]
         self.assertEqual(ComponentData.objects.get(name="form-quote").data["fields"], exported["fields"])
-        self.assertEqual(ComponentData.objects.get(name="form-quote").draft_data["fields"][0]["name"], "draft-only")
+        draft_fields = ComponentData.objects.get(name="form-quote").draft_data["fields"]
+        if json.loads(manifest.read_text(encoding="utf-8")).get("formFieldsFromCode"):
+            # The site owns its form fields in code, drafts included.
+            self.assertEqual(draft_fields, exported["fields"])
+        else:
+            self.assertEqual(draft_fields[0]["name"], "draft-only")
         self.assertEqual(get_plan()["status"], "approved")
         self.assertEqual(len(get_plan()["conversions"]), 16)

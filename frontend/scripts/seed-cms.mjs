@@ -385,6 +385,9 @@ async function main() {
             version: 2,
             settings: await seedSettings(),
             form,
+            // The booking form's fields live in src/data/quote-form.json: every
+            // release makes the CMS copy (which the server validates against) match.
+            formFieldsFromCode: true,
             pageSeo: await seedPageSeo(),
             blog: await seedBlog(),
             pages: await seedPages(),

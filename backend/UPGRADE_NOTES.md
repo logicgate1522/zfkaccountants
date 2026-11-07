@@ -13,6 +13,11 @@
   the plan. It repairs the original v1 library plan only if that plan is still
   approved at version 1 and has no lead conversions. Existing form drafts and
   owner-edited plans are preserved.
+- A manifest with `"formFieldsFromCode": true` makes the quote form's field
+  list code-owned: every release replaces `form-quote` `fields` (published and
+  draft) with the manifest's, so server validation always matches the form the
+  site renders. Other form keys (button text, messages) keep their CMS edits.
+  zfkaccountants sets it in `frontend/scripts/seed-cms.mjs`.
 
 # Upgrade Notes — security: Django 5.2 LTS, patched dependencies, a dependencies gate
 
