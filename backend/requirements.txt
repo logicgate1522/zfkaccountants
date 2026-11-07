@@ -12,6 +12,7 @@ djangorestframework==3.18.3
 gunicorn==23.0.0
 idna==3.20
 packaging==25.0
+# 13.x: pip-audit advisories against 12.3.x (fixed in 13.0.0)
 pillow==13.0.0
 psycopg2-binary==2.9.11
 pycparser==3.1

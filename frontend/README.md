@@ -126,3 +126,9 @@ End-to-end acceptance (production build + CMS running; see the script header):
 Env: `NEXT_PUBLIC_API_URL`, `NEXT_PUBLIC_SITE_URL`, `REVALIDATE_SECRET` (the
 same value as the CMS `.env`; the CMS's `FRONTEND_REVALIDATE_URL` points at
 this site's `/api/revalidate`).
+
+Booking flow: after a successful submission the booking form
+(`components/contact/QuoteForm.jsx`) sends the visitor to `/thank-you`
+(noindex, not in the sitemap). Its "How did you hear about us?" answer is a
+separate follow-up email through `sendFormEmail`; it never changes the stored
+submission and is not a lead or conversion.
