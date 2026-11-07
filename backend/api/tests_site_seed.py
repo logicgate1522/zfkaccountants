@@ -118,7 +118,9 @@ class SiteSeedTests(TestCase):
         call_command("seed_site_defaults", manifest=manifest, verbosity=0)
         self.assertEqual(BlogPost.objects.count(), 6)
         self.assertEqual(ContentPage.objects.count(), 5)
-        self.assertEqual(len(ComponentData.objects.get(name="form-quote").data["fields"]), 9)
+        # Exactly the site's own form definition, whatever fields it has.
+        exported = json.loads(manifest.read_text(encoding="utf-8"))["form"]
+        self.assertEqual(ComponentData.objects.get(name="form-quote").data["fields"], exported["fields"])
         self.assertEqual(ComponentData.objects.get(name="form-quote").draft_data["fields"][0]["name"], "draft-only")
         self.assertEqual(get_plan()["status"], "approved")
         self.assertEqual(len(get_plan()["conversions"]), 16)
