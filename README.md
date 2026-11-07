@@ -7,7 +7,7 @@ ZFK Accountants website and Django content management backend in one repository.
 
 ## Local development
 
-Start the backend:
+Start the backend :
 
 ```bash
 cd backend
